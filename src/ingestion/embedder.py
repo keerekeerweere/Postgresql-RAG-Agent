@@ -25,6 +25,32 @@ embedding_client = openai.AsyncOpenAI(
 )
 EMBEDDING_MODEL = settings.embedding_model
 
+# Model config defaults live here so ingestion and query use the same dimensions
+MODEL_CONFIGS = {
+    "text-embedding-3-small": {"dimensions": 1536, "max_tokens": 8191},
+    "text-embedding-3-large": {"dimensions": 3072, "max_tokens": 8191},
+    "text-embedding-ada-002": {"dimensions": 1536, "max_tokens": 8191},
+    "qwen3-embedding": {"dimensions": 1536, "max_tokens": 8191},
+    "mxbai-embed-large": {"dimensions": 1024, "max_tokens": 8191},
+}
+DEFAULT_MODEL_CONFIG = {"dimensions": 1536, "max_tokens": 8191}
+
+
+def resolve_embedding_config(model: str) -> dict:
+    """Lookup the embedding model config, with a sane default."""
+    return MODEL_CONFIGS.get(model, DEFAULT_MODEL_CONFIG)
+
+
+def resolve_embedding_dimension(model: str, override: int | None = None) -> int:
+    """
+    Resolve the embedding dimension consistently for ingestion and queries.
+
+    If an override is provided, it wins; otherwise use the known model config.
+    """
+    if override:
+        return override
+    return resolve_embedding_config(model)["dimensions"]
+
 
 class EmbeddingGenerator:
     """Generates embeddings for document chunks."""
@@ -32,7 +58,8 @@ class EmbeddingGenerator:
     def __init__(
         self,
         model: str = EMBEDDING_MODEL,
-        batch_size: int = 100
+        batch_size: int = 100,
+        dimension: int | None = None,
     ):
         """
         Initialize embedding generator.
@@ -40,23 +67,12 @@ class EmbeddingGenerator:
         Args:
             model: Embedding model to use
             batch_size: Number of texts to process in parallel
+            dimension: Embedding dimensionality override (uses model config by default)
         """
         self.model = model
         self.batch_size = batch_size
-
-        # Model-specific configurations
-        self.model_configs = {
-            "text-embedding-3-small": {"dimensions": 1536, "max_tokens": 8191},
-            "text-embedding-3-large": {"dimensions": 3072, "max_tokens": 8191},
-            "text-embedding-ada-002": {"dimensions": 1536, "max_tokens": 8191},
-            "qwen3-embedding": {"dimensions": 1536, "max_tokens": 8191},
-            "mxbai-embed-large": {"dimensions": 1024, "max_tokens": 8191}
-        }
-
-        self.config = self.model_configs.get(
-            model,
-            {"dimensions": 1536, "max_tokens": 8191}
-        )
+        self.config = resolve_embedding_config(model)
+        self.dimension = resolve_embedding_dimension(model, dimension)
 
     async def generate_embedding(self, text: str) -> List[float]:
         """
@@ -72,11 +88,11 @@ class EmbeddingGenerator:
         if len(text) > self.config["max_tokens"] * 4:
             text = text[:self.config["max_tokens"] * 4]
 
-        response = await embedding_client.embeddings.create(
-            model=self.model,
-            dimensions = 1536,
-            input=text
-        )
+        request_kwargs = {"model": self.model, "input": text}
+        if self.dimension:
+            request_kwargs["dimensions"] = self.dimension
+
+        response = await embedding_client.embeddings.create(**request_kwargs)
 
         return response.data[0].embedding
 
@@ -100,11 +116,11 @@ class EmbeddingGenerator:
                 text = text[:self.config["max_tokens"] * 4]
             processed_texts.append(text)
 
-        response = await embedding_client.embeddings.create(
-            model=self.model,
-            dimensions=1536,
-            input=processed_texts
-        )
+        request_kwargs = {"model": self.model, "input": processed_texts}
+        if self.dimension:
+            request_kwargs["dimensions"] = self.dimension
+
+        response = await embedding_client.embeddings.create(**request_kwargs)
 
         return [data.embedding for data in response.data]
 
@@ -180,7 +196,7 @@ class EmbeddingGenerator:
 
     def get_embedding_dimension(self) -> int:
         """Get the dimension of embeddings for this model."""
-        return self.config["dimensions"]
+        return self.dimension
 
 
 def create_embedder(model: str = EMBEDDING_MODEL, **kwargs) -> EmbeddingGenerator:

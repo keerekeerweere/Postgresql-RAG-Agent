@@ -7,6 +7,7 @@ from pymongo import AsyncMongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import openai
 from src.settings import load_settings
+from src.ingestion.embedder import resolve_embedding_dimension
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +98,15 @@ class AgentDependencies:
         if not self.openai_client:
             await self.initialize()
 
+        dim = resolve_embedding_dimension(
+            self.settings.embedding_model,
+            self.settings.embedding_dimension,
+        )
+
         response = await self.openai_client.embeddings.create(
-            model=self.settings.embedding_model, dimensions=1536,input=text
+            model=self.settings.embedding_model,
+            input=text,
+            dimensions=dim,
         )
         # Return as list of floats - MongoDB stores as native array
         return response.data[0].embedding
