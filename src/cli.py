@@ -164,8 +164,8 @@ def display_welcome():
     settings = load_settings()
 
     welcome = Panel(
-        "[bold blue]MongoDB RAG Agent[/bold blue]\n\n"
-        "[green]Intelligent knowledge base search with MongoDB Atlas Vector Search[/green]\n"
+        "[bold blue]PostgreSQL RAG Agent[/bold blue]\n\n"
+        "[green]Intelligent knowledge base search with pgvector hybrid search[/green]\n"
         f"[dim]LLM: {settings.llm_model}[/dim]\n\n"
         "[dim]Type 'exit' to quit, 'info' for system info, 'clear' to clear screen[/dim]",
         style="blue",
@@ -209,6 +209,7 @@ async def main():
                         f"[cyan]LLM Provider:[/cyan] {settings.llm_provider}\n"
                         f"[cyan]LLM Model:[/cyan] {settings.llm_model}\n"
                         f"[cyan]Embedding Model:[/cyan] {settings.embedding_model}\n"
+                        f"[cyan]Embedding Dimension:[/cyan] {settings.embedding_dimension}\n"
                         f"[cyan]Default Match Count:[/cyan] {settings.default_match_count}\n"
                         f"[cyan]Default Text Weight:[/cyan] {settings.default_text_weight}",
                         title="System Configuration",

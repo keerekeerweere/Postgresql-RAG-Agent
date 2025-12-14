@@ -1,4 +1,4 @@
-"""Configuration validation script for MongoDB RAG Agent."""
+"""Configuration validation script for PostgreSQL RAG Agent."""
 
 import sys
 from src.settings import load_settings
@@ -21,7 +21,7 @@ def validate_config() -> bool:
     """
     try:
         print("=" * 60)
-        print("MongoDB RAG Agent - Configuration Validation")
+        print("PostgreSQL RAG Agent - Configuration Validation")
         print("=" * 60)
         print()
 
@@ -31,15 +31,11 @@ def validate_config() -> bool:
         print("[OK] Settings loaded successfully")
         print()
 
-        # Validate MongoDB configuration
-        print("[2/4] Validating MongoDB configuration...")
-        print(f"  MongoDB URI: {mask_credential(settings.mongodb_uri)}")
-        print(f"  Database: {settings.mongodb_database}")
-        print(f"  Documents Collection: {settings.mongodb_collection_documents}")
-        print(f"  Chunks Collection: {settings.mongodb_collection_chunks}")
-        print(f"  Vector Index: {settings.mongodb_vector_index}")
-        print(f"  Text Index: {settings.mongodb_text_index}")
-        print("[OK] MongoDB configuration present")
+        # Validate Postgres configuration
+        print("[2/4] Validating Postgres configuration...")
+        print(f"  Database URL: {mask_credential(settings.database_url)}")
+        print(f"  Pool: min={settings.db_pool_min_size}, max={settings.db_pool_max_size}")
+        print("[OK] Postgres configuration present")
         print()
 
         # Validate LLM configuration
@@ -69,8 +65,7 @@ def validate_config() -> bool:
         print("Next steps:")
         print("1. Add documents to the ./documents/ folder")
         print("2. Run ingestion: uv run python -m src.ingestion.ingest -d ./documents")
-        print("3. Create search indexes in MongoDB Atlas (after ingestion completes)")
-        print("   See README.md for index creation instructions")
+        print("3. Ensure pgvector and indexes exist (created automatically on first run)")
         print()
 
         return True

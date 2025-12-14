@@ -1,4 +1,4 @@
-"""Settings configuration for MongoDB RAG Agent."""
+"""Settings configuration for PostgreSQL RAG Agent (local pgvector)."""
 
 from pydantic_settings import BaseSettings
 from pydantic import Field, ConfigDict
@@ -16,28 +16,13 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
-    # MongoDB Configuration
-    mongodb_uri: str = Field(..., description="MongoDB Atlas connection string")
-
-    mongodb_database: str = Field(default="rag_db", description="MongoDB database name")
-
-    mongodb_collection_documents: str = Field(
-        default="documents", description="Collection for source documents"
+    # Database Configuration (local Postgres + pgvector)
+    database_url: str = Field(
+        ...,
+        description="PostgreSQL connection URL (with pgvector extension enabled)"
     )
-
-    mongodb_collection_chunks: str = Field(
-        default="chunks", description="Collection for document chunks with embeddings"
-    )
-
-    mongodb_vector_index: str = Field(
-        default="vector_index",
-        description="Vector search index name (must be created in Atlas UI)",
-    )
-
-    mongodb_text_index: str = Field(
-        default="text_index",
-        description="Full-text search index name (must be created in Atlas UI)",
-    )
+    db_pool_min_size: int = Field(default=5, description="Minimum asyncpg pool size")
+    db_pool_max_size: int = Field(default=10, description="Maximum asyncpg pool size")
 
     # LLM Configuration (OpenAI-compatible)
     llm_provider: str = Field(
@@ -72,7 +57,7 @@ class Settings(BaseSettings):
 
     embedding_dimension: int = Field(
         default=1536,
-        description="Embedding vector dimension (1536 for text-embedding-3-small)",
+        description="Embedding vector dimension (e.g., 1536/3072/4096)",
     )
 
     # Search Configuration
@@ -95,8 +80,8 @@ def load_settings() -> Settings:
         return Settings()
     except Exception as e:
         error_msg = f"Failed to load settings: {e}"
-        if "mongodb_uri" in str(e).lower():
-            error_msg += "\nMake sure to set MONGODB_URI in your .env file"
+        if "database_url" in str(e).lower():
+            error_msg += "\nMake sure to set DATABASE_URL in your .env file"
         if "llm_api_key" in str(e).lower():
             error_msg += "\nMake sure to set LLM_API_KEY in your .env file"
         if "embedding_api_key" in str(e).lower():
